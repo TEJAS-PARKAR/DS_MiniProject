@@ -1,0 +1,52 @@
+services:
+  branch-0:
+    build: .
+    container_name: branch-0
+    hostname: branch-0
+    command: ["python", "-m", "src.node.branch_node", "--node-id", "branch-0", "--config", "config/docker_defaults.yaml"]
+    ports:
+      - "9001:9001"
+      - "10001:10001"
+    networks:
+      - branch-net
+    restart: unless-stopped
+
+  branch-1:
+    build: .
+    container_name: branch-1
+    hostname: branch-1
+    command: ["python", "-m", "src.node.branch_node", "--node-id", "branch-1", "--config", "config/docker_defaults.yaml"]
+    ports:
+      - "9002:9002"
+      - "10002:10002"
+    networks:
+      - branch-net
+    restart: unless-stopped
+
+  branch-2:
+    build: .
+    container_name: branch-2
+    hostname: branch-2
+    command: ["python", "-m", "src.node.branch_node", "--node-id", "branch-2", "--config", "config/docker_defaults.yaml"]
+    ports:
+      - "9003:9003"
+      - "10003:10003"
+    networks:
+      - branch-net
+    restart: unless-stopped
+
+  branch-3:
+    build: .
+    container_name: branch-3
+    hostname: branch-3
+    command: ["python", "-m", "src.node.branch_node", "--node-id", "branch-3", "--config", "config/docker_defaults.yaml"]
+    ports:
+      - "9004:9004"
+      - "10004:10004"
+    networks:
+      - branch-net
+    restart: unless-stopped
+
+networks:
+  branch-net:
+    driver: bridge

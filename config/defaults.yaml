@@ -1,0 +1,45 @@
+# Default Configuration for Distributed Blood Bank Mutual Exclusion Framework
+system:
+  algorithm: "ricart_agrawala"  # Options: ricart_agrawala, suzuki_kasami, raymond_tree, resilient_logical_tree
+  protocol_version: "1.0"
+  random_seed: 42
+
+nodes:
+  - node_id: "branch-0"
+    host: "127.0.0.1"
+    port: 9001
+  - node_id: "branch-1"
+    host: "127.0.0.1"
+    port: 9002
+  - node_id: "branch-2"
+    host: "127.0.0.1"
+    port: 9003
+  - node_id: "branch-3"
+    host: "127.0.0.1"
+    port: 9004
+
+network:
+  mean_delay_ms: 10.0
+  jitter_ms: 2.0
+  message_loss_rate: 0.0  # 0.0 to 1.0
+  connection_timeout_ms: 3000.0
+
+timeouts:
+  message_delivery_timeout_ms: 2000.0
+  token_response_timeout_ms: 5000.0
+  heartbeat_interval_ms: 1000.0
+  heartbeat_timeout_ms: 3000.0
+  max_retries: 3
+  retry_backoff_ms: 500.0
+
+workload:
+  requests_per_node: 10
+  mean_think_time_ms: 50.0
+  critical_section_duration_ms: 20.0
+  arrival_distribution: "exponential"  # Options: exponential, uniform, constant
+  workload_seed: 101
+
+experiment:
+  duration_seconds: 30.0
+  collect_metrics: true
+  export_traces: true
