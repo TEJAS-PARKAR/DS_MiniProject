@@ -1,0 +1,100 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: branch-headless
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    app: dme-branch
+  ports:
+  - name: tcp
+    port: 9001
+    targetPort: 9001
+  - name: health
+    port: 10001
+    targetPort: 10001
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dme-config
+data:
+  kubernetes.yaml: "system:\n  algorithm: ricart_agrawala\n  protocol_version: '1.0'\n\
+    \  random_seed: 42\nnodes:\n- node_id: branch-0\n  host: branch-0.branch-headless\n\
+    \  port: 9001\n  health_port: 10001\n- node_id: branch-1\n  host: branch-1.branch-headless\n\
+    \  port: 9001\n  health_port: 10001\n- node_id: branch-2\n  host: branch-2.branch-headless\n\
+    \  port: 9001\n  health_port: 10001\n- node_id: branch-3\n  host: branch-3.branch-headless\n\
+    \  port: 9001\n  health_port: 10001\n- node_id: branch-4\n  host: branch-4.branch-headless\n\
+    \  port: 9001\n  health_port: 10001\nnetwork:\n  mean_delay_ms: 5.0\n  jitter_ms:\
+    \ 0.0\n  message_loss_rate: 0.0\n  connection_timeout_ms: 5000.0\ntimeouts:\n\
+    \  message_delivery_timeout_ms: 3000.0\n  token_response_timeout_ms: 10000.0\n\
+    \  heartbeat_interval_ms: 1000.0\n  heartbeat_timeout_ms: 5000.0\n  max_retries:\
+    \ 3\n  retry_backoff_ms: 500.0\nworkload:\n  requests_per_node: 5\n  mean_think_time_ms:\
+    \ 20.0\n  critical_section_duration_ms: 2.0\n  arrival_distribution: exponential\n\
+    \  workload_seed: 42\nexperiment:\n  duration_seconds: 60.0\n  collect_metrics:\
+    \ true\n  export_traces: true\n"
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: branch
+spec:
+  serviceName: branch-headless
+  replicas: 5
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app: dme-branch
+  template:
+    metadata:
+      labels:
+        app: dme-branch
+    spec:
+      terminationGracePeriodSeconds: 15
+      containers:
+      - name: branch-node
+        image: distributed-blood-bank:latest
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -c
+        args:
+        - NODE_SUFFIX="${HOSTNAME##*-}"; exec python -m src.node.branch_node --node-id
+          "branch-${NODE_SUFFIX}" --config /app/config/kubernetes.yaml --initial-token-holder
+          branch-0 --enable-failure-detection
+        ports:
+        - name: tcp
+          containerPort: 9001
+        - name: health
+          containerPort: 10001
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: health
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: health
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        volumeMounts:
+        - name: config
+          mountPath: /app/config/kubernetes.yaml
+          subPath: kubernetes.yaml
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: dme-config

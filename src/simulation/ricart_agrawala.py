@@ -14,7 +14,7 @@ class SimulationRicartAgrawala:
             pid: None for pid in sim.processes
         }
         self.replies: Dict[int, Set[int]] = {pid: set() for pid in sim.processes}
-        self.deferred: Dict[int, Set[int]] = {pid: set() for pid in sim.processes}
+        self.deferred: Dict[int, Dict[int, int]] = {pid: {} for pid in sim.processes}
         self.request_number: Dict[int, int] = {pid: 0 for pid in sim.processes}
         self.completed = 0
         self.wait_times: List[float] = []
@@ -78,21 +78,23 @@ class SimulationRicartAgrawala:
             )
 
             if should_defer:
-                self.deferred[pid].add(sender)
-                self.sim.log(pid, "DEFER_REPLY", {"to": sender})
+                self.deferred[pid][sender] = int(msg.get("request_id", 0))
+                self.sim.log(pid, "DEFER_REPLY", {"to": sender, "request_id": msg.get("request_id")})
             else:
-                self._send_reply(pid, sender)
+                self._send_reply(pid, sender, int(msg.get("request_id", 0)))
 
         elif msg["type"] == "REPLY":
-            self.replies[pid].add(msg["sender"])
-            self._try_enter(pid)
+            # Ignore delayed replies from an earlier request by the same process.
+            if msg.get("request_id") == self.request_number[pid]:
+                self.replies[pid].add(msg["sender"])
+                self._try_enter(pid)
 
-    def _send_reply(self, sender: int, receiver: int) -> None:
+    def _send_reply(self, sender: int, receiver: int, request_id: int) -> None:
         """Send REPLY message to requester."""
         self.sim.send(
             sender,
             receiver,
-            {"type": "REPLY", "sender": sender},
+            {"type": "REPLY", "sender": sender, "request_id": request_id},
             lambda msg, r=receiver: self._receive(r, msg),
         )
 
@@ -138,12 +140,12 @@ class SimulationRicartAgrawala:
         self.sim.log(pid, "EXIT_CS")
 
         waiting = sorted(
-            self.deferred[pid],
-            key=lambda other: (self.request[other] or (float("inf"), other)),
+            self.deferred[pid].items(),
+            key=lambda item: (self.request[item[0]] or (float("inf"), item[0])),
         )
         self.deferred[pid].clear()
 
-        for other in waiting:
-            self._send_reply(pid, other)
+        for other, deferred_request_id in waiting:
+            self._send_reply(pid, other, deferred_request_id)
 
         self.request[pid] = None

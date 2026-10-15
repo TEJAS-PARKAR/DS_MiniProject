@@ -32,6 +32,16 @@ ENV/
 htmlcov/
 *.log
 
-# Results data & figures (keep gitkeep)
-results/*
-!results/.gitkeep
+# Benchmark result CSVs, raw event traces, summaries, and charts.
+#
+# Per-run raw files are large (~460 MB for 570 runs) and fully reproducible
+# by re-running the experiment suites. Ignore them.
+# Suite-level aggregate CSVs, PNG charts, and the markdown report are small
+# deliverables and ARE tracked (not ignored here).
+#
+# Per-run event CSVs  (pattern: <algo>-<n>-<seed>-<uuid>_events.csv)
+results/*-*-*-*_events.csv
+# Per-run message logs
+results/*.jsonl
+# Per-run JSON summaries  (pattern: <algo>-<n>-<seed>-<uuid>_summary.json)
+results/*-*-*-*_summary.json

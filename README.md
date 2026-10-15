@@ -1,7 +1,7 @@
 # A Failure-Resilient Distributed Mutual Exclusion Framework for Blood Unit Allocation in Multi-Branch Blood Banks
 
 [![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/)
-[![Test Suite](https://img.shields.io/badge/tests-121%20passed-brightgreen.svg)]()
+[![Benchmarking](https://img.shields.io/badge/benchmarking-repeatable-blue.svg)]()
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
 
 A reproducible distributed systems research and engineering framework evaluating distributed mutual exclusion (DME) algorithms, failure detection heuristics, and consistent inventory allocation across independent network-connected branch blood banks.
@@ -248,7 +248,7 @@ distributed-blood-bank/
 │   └── experiments.yaml        # Matrix experiment configurations
 ├── src/
 │   ├── common/                 # ProtocolMessage, configuration, framing, TCP transport
-│   ├── simulation/             # Discrete-event engine (Phase 1)
+│   ├── simulation/             # Discrete-event engine and safety monitor
 │   ├── algorithms/             # Production DME implementations:
 │   │   ├── ricart_agrawala.py  # Permission-based algorithm (Phase 3)
 │   │   ├── suzuki_kasami.py    # Broadcast token-based algorithm (Phase 4)
@@ -258,15 +258,17 @@ distributed-blood-bank/
 │   │   ├── failure_detector.py # Chandra-Toueg suspicion failure detector (Phase 7)
 │   │   ├── health.py           # Diagnostic HTTP health server (Phase 5)
 │   │   └── state.py            # NodeRuntimeState metrics & interval tracking
-│   └── blood_bank/             # Domain inventory & allocation (Phases 6 & 7):
+│   ├── blood_bank/             # Domain inventory & allocation (Phases 6 & 7):
 │       ├── models.py           # BloodUnit, BloodGroup, ComponentType, UnitStatus
 │       ├── compatibility.py    # Synthetic ABO/Rh compatibility rules
 │       ├── inventory.py        # Authoritative BloodBankInventory & uncertain reservations
 │       ├── synthetic_data.py   # Deterministic synthetic inventory generator
 │       └── allocation_service.py # Protected AllocationService coordinating DME
+├── src/experiments/            # Seeded benchmark controller and results export
+├── k8s/                        # Kubernetes manifest generator and deployment notes
 └── tests/
-    ├── unit/                   # 115 comprehensive unit tests
-    └── integration/            # 6 multi-node real TCP socket integration tests
+    ├── unit/                   # Unit tests for protocols, experiments, and safety audit
+    └── integration/            # Real TCP socket integration tests
 ```
 
 ### Phase Summary:
@@ -314,7 +316,7 @@ distributed-blood-bank/
 The test suite is divided into focused modules:
 
 ```powershell
-# 1. Run all 121 tests across all phases
+# 1. Run the complete test suite
 python -m pytest tests/unit tests/integration -v
 
 # 2. Run only Phase 6 Inventory and Allocation tests
@@ -329,7 +331,74 @@ python -m pytest tests/integration -v
 
 ---
 
-## 8. Troubleshooting & FAQs
+## 8. Repeatable Algorithm Benchmarking
+
+The benchmark runner compares the **discrete-event simulation implementations** of Ricart–Agrawala, Suzuki–Kasami, and Raymond under the same seeded offered-arrival schedule across 10 independent trials per configuration. It exports raw event CSVs, message JSONL files, per-run JSON summaries, an aggregate results CSV, an aggregate summary CSV with **mean ± std** for every metric, and PNG charts.
+
+### Running the suites
+
+```powershell
+# Reliable 5-process baseline
+python -m src.experiments.runner --suite baseline --output-dir results
+
+# Scalability: 5, 10, 20, 50 logical processes
+python -m src.experiments.runner --suite scalability --output-dir results
+
+# Network delay sensitivity (1, 5, 10, 50 ms)
+python -m src.experiments.runner --suite network_delay --output-dir results
+
+# Message-loss resilience (0 %, 1 %, 5 %)
+python -m src.experiments.runner --suite message_loss --output-dir results
+```
+
+Each command **regenerates charts automatically** — no separate plotting step is needed.  
+Charts are saved to `results/<suite>_<metric>.png` and show **±1 σ shaded bands** across 10 trials.
+
+Override request count or simulation deadline if needed:
+
+```powershell
+python -m src.experiments.runner --suite baseline --requests-per-process 10 --max-simulation-time-ms 60000 --output-dir results
+```
+
+### Generated files
+
+| File | Contents |
+|---|---|
+| `results/<suite>_results.csv` | One row per run — all raw metrics |
+| `results/<suite>_summary.csv` | One row per `(algorithm, process_count, delay, loss_rate)` — `_mean` and `_std` columns for every numeric metric |
+| `results/<suite>_mean_wait_ms.png` | Mean protocol wait time vs. process count (loss=0 %, ±1σ bands) |
+| `results/<suite>_throughput_ops_per_sec.png` | Throughput vs. process count (loss=0 %, ±1σ bands) |
+| `results/<suite>_messages_sent.png` | Message count vs. process count (loss=0 %, ±1σ bands) |
+| `results/benchmark_report.md` | Full human-readable report with all tables |
+
+### Per-run metrics
+
+The `<suite>_results.csv` includes these columns (among others):
+
+| Column | Description |
+|---|---|
+| `mean_wait_ms` | Mean protocol wait time across all operations in the run |
+| `wait_std_ms` | Std dev of per-operation wait times (within run) |
+| `wait_cv` | Coefficient of variation (`std/mean`) — fairness proxy; lower = more uniform |
+| `p95_wait_ms` | 95th-percentile wait time |
+| `throughput_ops_per_sec` | Completed operations ÷ elapsed simulated time |
+| `messages_sent` / `messages_delivered` / `messages_dropped` | Network message counts |
+| `max_concurrent_cs` | Peak number of processes simultaneously inside CS (must be 1 for correct algorithms) |
+| `stalled_requests` | Operations not completed before the simulation deadline |
+| `run_status` | `completed`, `incomplete`, or `safety_violation` |
+
+### Summary aggregation
+
+The `<suite>_summary.csv` groups by `(algorithm, process_count, configured_delay, loss_rate)` so different network conditions are **never averaged together**. Wait/throughput means are computed only from `completed` runs; `n_incomplete` and `n_safety_violation` are counted separately.
+
+### Simulator vs. Kubernetes runtime
+
+The benchmark runner measures the **discrete-event simulator**, not wall-clock performance of Kubernetes pods. The existing TCP runtime can be deployed as independent pods using the manifest generator in `k8s/`; see [`k8s/README.md`](k8s/README.md). A live-cluster workload controller and cross-pod metrics collector are not yet implemented — do not describe the simulator's CSV as Kubernetes runtime measurements.
+
+
+---
+
+## 9. Troubleshooting & FAQs
 
 * **PowerShell script execution error (`cannot be loaded because running scripts is disabled`):**
   Run: `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` in your PowerShell window before activating `venv`.

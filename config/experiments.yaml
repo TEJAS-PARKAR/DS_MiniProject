@@ -1,53 +1,44 @@
-# Experimental Matrix Configuration
-version: "1.0"
+# Repeatable discrete-event benchmark matrix. Delay and simulation times are in ms.
+version: "2.0"
+
+workload:
+  requests_per_process: 5
+  mean_think_time_ms: 20.0
+  critical_section_ms: 2.0
+  max_simulation_time_ms: 30000.0
 
 suites:
   baseline:
-    name: "A. Baseline Evaluation"
-    description: "4 nodes, zero packet loss, low contention, no faults"
-    node_counts: [4]
+    name: "Reliable baseline comparison"
+    description: "5 processes, zero loss, identical seeded workload across all algorithms"
+    node_counts: [5]
     algorithms: ["ricart_agrawala", "suzuki_kasami", "raymond_tree"]
     loss_rates: [0.0]
     network_delays_ms: [5.0]
-    contention_levels: ["low"]
-    seeds: [42, 43, 44]
+    seeds: [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
 
   scalability:
-    name: "B. Scalability Evaluation"
-    description: "Evaluates algorithm overhead with increasing node counts"
-    node_counts: [4, 8, 16]
+    name: "Process-count scalability"
+    description: "Scalability at 5, 10, 20, and 50 logical processes under reliable delivery"
+    node_counts: [5, 10, 20, 50]
     algorithms: ["ricart_agrawala", "suzuki_kasami", "raymond_tree"]
     loss_rates: [0.0]
     network_delays_ms: [5.0]
-    contention_levels: ["medium"]
-    seeds: [100, 101]
+    seeds: [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
 
   network_delay:
-    name: "C. Network Delay Sensitivity"
-    description: "Evaluates impact of varying network round-trip latencies"
-    node_counts: [4]
+    name: "Network delay sensitivity"
+    node_counts: [5, 20]
     algorithms: ["ricart_agrawala", "suzuki_kasami", "raymond_tree"]
     loss_rates: [0.0]
-    network_delays_ms: [1.0, 10.0, 50.0]
-    contention_levels: ["medium"]
-    seeds: [200, 201]
-
-  contention:
-    name: "D. Contention Sweep"
-    description: "Low, medium, and high arrival rates under mutual exclusion"
-    node_counts: [4]
-    algorithms: ["ricart_agrawala", "suzuki_kasami", "raymond_tree"]
-    loss_rates: [0.0]
-    network_delays_ms: [5.0]
-    contention_levels: ["low", "medium", "high"]
-    seeds: [300, 301]
+    network_delays_ms: [1.0, 5.0, 10.0, 50.0]
+    seeds: [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
 
   message_loss:
-    name: "E. Message Loss Resilience"
-    description: "Packet loss injected at 0%, 1%, and 5%"
-    node_counts: [4]
+    name: "Message loss sensitivity"
+    description: "Loss runs are expected to stall for some algorithms; incomplete runs remain failures"
+    node_counts: [5, 20]
     algorithms: ["ricart_agrawala", "suzuki_kasami", "raymond_tree"]
     loss_rates: [0.0, 0.01, 0.05]
     network_delays_ms: [5.0]
-    contention_levels: ["medium"]
-    seeds: [400, 401]
+    seeds: [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]

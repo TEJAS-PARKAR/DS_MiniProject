@@ -49,3 +49,37 @@ class SafetyMonitor:
     def is_safe(self) -> bool:
         """Return True if no safety violations have occurred."""
         return len(self.violations) == 0
+
+
+def detect_overlapping_intervals(intervals: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Return every pair of overlapping CS intervals belonging to distinct processes.
+
+    Each item must contain ``process_id``, ``entry_time`` and ``exit_time``.
+    Intervals are treated as half-open [entry, exit), so touching boundaries are safe.
+    This independent check can audit exported event traces and injected fault fixtures.
+    """
+    normalized = []
+    for item in intervals:
+        pid = item["process_id"]
+        start = float(item["entry_time"])
+        end = float(item["exit_time"])
+        if end < start:
+            raise ValueError(f"exit_time precedes entry_time for process {pid}")
+        normalized.append((pid, start, end))
+
+    overlaps: List[Dict[str, Any]] = []
+    for i, (pid_a, start_a, end_a) in enumerate(normalized):
+        for pid_b, start_b, end_b in normalized[i + 1:]:
+            if pid_a == pid_b:
+                continue
+            overlap_start = max(start_a, start_b)
+            overlap_end = min(end_a, end_b)
+            if overlap_start < overlap_end:
+                overlaps.append({
+                    "type": "overlapping_intervals",
+                    "process_a": pid_a,
+                    "process_b": pid_b,
+                    "overlap_start": overlap_start,
+                    "overlap_end": overlap_end,
+                })
+    return overlaps
