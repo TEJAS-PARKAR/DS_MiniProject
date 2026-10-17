@@ -4,7 +4,7 @@ This folder deploys the existing real-TCP `BranchNode` runtime as independent Ku
 
 ## Build and load the image
 
-Build the repository's Docker image as `distributed-blood-bank:latest` and make it available to your cluster. For Minikube, use its Docker daemon before building; for kind, build locally and load the image into kind. For a remote cluster, push the image to a registry and pass that image to the generator.
+Build the repository's Docker image as `dme-benchmarking:latest` and make it available to your cluster. For Minikube, use its Docker daemon before building; for kind, build locally and load the image into kind. For a remote cluster, push the image to a registry and pass that image to the generator.
 
 ## Generate and deploy
 
@@ -26,4 +26,4 @@ The StatefulSet uses a headless service for stable pod DNS, TCP port 9001, healt
 - The node runtime does not yet expose an experiment API to schedule identical workloads across live pods or aggregate all pod events into the required benchmark CSV. Use the discrete-event experiment runner for repeatable algorithm comparisons until that live-cluster controller/collector is implemented.
 - The simulator supports synthetic message delay and loss; the Kubernetes manifests currently configure a reliable runtime baseline and do not install a network fault-injection layer.
 - Heartbeats and suspicion are not proof of failure. Do not claim token recovery or fault tolerance beyond the implemented fail-closed policies.
-- Synthetic blood-bank domain models are not clinically validated and must not be used for transfusion decisions.
+- The optional synthetic blood-bank demo is outside the paper benchmark scope and is not clinically validated.

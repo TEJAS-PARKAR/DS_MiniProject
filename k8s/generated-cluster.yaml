@@ -56,7 +56,7 @@ spec:
       terminationGracePeriodSeconds: 15
       containers:
       - name: branch-node
-        image: distributed-blood-bank:latest
+        image: dme-benchmarking:latest
         imagePullPolicy: IfNotPresent
         command:
         - /bin/sh

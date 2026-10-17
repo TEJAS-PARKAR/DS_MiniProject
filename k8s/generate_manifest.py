@@ -68,7 +68,7 @@ def main():
     parser = argparse.ArgumentParser(description="Generate Kubernetes YAML for DME branch nodes")
     parser.add_argument("--nodes", type=int, choices=[5, 10, 20, 50], default=5)
     parser.add_argument("--algorithm", choices=sorted(ALGORITHMS), default="ricart_agrawala")
-    parser.add_argument("--image", default="distributed-blood-bank:latest")
+    parser.add_argument("--image", default="dme-benchmarking:latest")
     parser.add_argument("--output", default="k8s/generated-cluster.yaml")
     args = parser.parse_args()
     output = Path(args.output)

@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "distributed-blood-bank"
+name = "dme-benchmarking"
 version = "0.1.0"
-description = "A Failure-Resilient Distributed Mutual Exclusion Framework for Blood Unit Allocation in Multi-Branch Blood Banks"
+description = "Simulation-based comparison of distributed mutual exclusion algorithms under varying process counts, network delays, and message loss"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
