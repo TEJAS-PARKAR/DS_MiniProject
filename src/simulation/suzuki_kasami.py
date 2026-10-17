@@ -128,7 +128,6 @@ class SimulationSuzukiKasami:
 
         if not self.sim.safety.enter(pid, self.sim.time):
             self.sim.log(pid, "SAFETY_VIOLATION")
-            return
 
         process.requesting = False
         process.in_critical_section = True
@@ -136,6 +135,7 @@ class SimulationSuzukiKasami:
 
         if process.request_time is not None:
             self.wait_times.append(process.entry_time - process.request_time)
+            process.request_time = None
 
         self.sim.log(pid, "ENTER_CS")
 

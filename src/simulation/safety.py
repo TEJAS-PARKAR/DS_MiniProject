@@ -11,6 +11,7 @@ class SafetyMonitor:
 
     def enter(self, process_id: int, time: float) -> bool:
         """Record entry to critical section, checking mutual exclusion invariants."""
+        safe = True
         if process_id in self.active_processes:
             self.violations.append({
                 "time": float(time),
@@ -18,7 +19,7 @@ class SafetyMonitor:
                 "process_id": process_id,
                 "active_processes": sorted(self.active_processes),
             })
-            return False
+            safe = False
 
         if self.active_processes:
             self.violations.append({
@@ -27,10 +28,10 @@ class SafetyMonitor:
                 "process_id": process_id,
                 "active_processes": sorted(self.active_processes),
             })
-            return False
+            safe = False
 
         self.active_processes.add(process_id)
-        return True
+        return safe
 
     def exit(self, process_id: int, time: float) -> bool:
         """Record exit from critical section, checking that entry preceded exit."""

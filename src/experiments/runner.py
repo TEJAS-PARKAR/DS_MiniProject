@@ -153,10 +153,6 @@ def run_experiment(spec: RunSpec, output_dir: str | Path) -> dict[str, Any]:
         for item in message_log:
             f.write(json.dumps(item, default=str) + "\n")
 
-    entry_times = {
-        int(row["process_id"]): float(row["time"])
-        for _, row in events[events["event_type"] == "ENTER_CS"].iterrows()
-    }
     # Algorithm wait times are protocol wait after the request is issued.
     wait_times = [float(v) for v in getattr(algorithm, "wait_times", [])]
     exits = events[events["event_type"] == "EXIT_CS"]

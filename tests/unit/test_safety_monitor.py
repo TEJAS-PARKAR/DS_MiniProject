@@ -34,3 +34,17 @@ def test_safety_exit_without_entry_detected():
     assert not monitor.exit(0, 1.0)
     assert not monitor.is_safe
     assert monitor.violations[0]["type"] == "exit_without_entry"
+
+
+def test_safety_simultaneous_access_observed_and_allows_exit():
+    monitor = SafetyMonitor()
+    assert monitor.enter(0, 1.0)
+    assert not monitor.enter(1, 1.5)  # Unsafe entry observed
+    assert monitor.active_processes == {0, 1}
+    assert monitor.exit(0, 2.0)  # Exits cleanly
+    assert monitor.active_processes == {1}
+    assert monitor.exit(1, 2.5)  # Exits cleanly without exit_without_entry
+    assert monitor.active_processes == set()
+    assert len(monitor.violations) == 1
+    assert monitor.violations[0]["type"] == "simultaneous_critical_section"
+
